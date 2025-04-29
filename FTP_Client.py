@@ -16,7 +16,7 @@ def InputListener():
 
 hostname = gethostname()
 IPAddr = gethostbyname(hostname)
-Server = '10.200.20.108'
+Server = '192.168.0.57'
 Port = 12345
 
 #Create socket
