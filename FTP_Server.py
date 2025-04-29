@@ -18,7 +18,7 @@ def NewClient(clientSocket, addr):
             Incoming  = Incoming[Index+1:]
             Index += 1
         filecontent = Incoming
-        filestorage[(filename,addr[1])] = filecontent
+        filestorage[filename] = filecontent
 
 
 def main():
