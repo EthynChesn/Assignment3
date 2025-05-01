@@ -106,13 +106,16 @@ def InputListener():
                     filenames += ["{}".format(line.strip())]
                 Loadfile.close()
             for file in filenames:
-                with open(filePath + file) as Loadfile:
-                    filestorage[file] = Loadfile.read()
-            Loadfile.close()
+                try:
+                    with open(filePath + file) as Loadfile:
+                        filestorage[file] = Loadfile.read()
+                    Loadfile.close()
+                except:
+                    print('Problem: ' + file + ' Was Skipped Because it Could Not be Found')
             print('Files Loaded Sucessfully')
         elif Command.startswith('read '):
             filename = Command.removeprefix('read ')
-            print(filestorage[filename])
+            print(filestorage[filename])    
      
 
 
