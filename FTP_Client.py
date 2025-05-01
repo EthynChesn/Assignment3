@@ -87,10 +87,10 @@ def InputListener():
 
 
 
-filePath = "YOURPATH (RECOMMEND ROOT OF DRIVE)"
+filePath = r"E:\\"
 hostname = gethostname()
 IPAddr = gethostbyname(hostname)
-Server = 'HOSTIP (IP of DEVICE HOSTING SERVER)'
+Server = '10.200.4.67'
 Port = 12345
 
 #Create socket
