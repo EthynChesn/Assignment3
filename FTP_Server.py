@@ -52,7 +52,11 @@ def NewClient(clientSocket, addr):
             else:
                 clientSocket.send('error'.encode())
                 print(addr[0] + ' Problem: ' + filename + ' Not Found')
-        
+        if IncomingCommand == 'close':
+            clientSocket.send('True'.encode())
+            clientSocket.close()
+            print(addr[0] + ' has disconnected')
+            break
 
 def InputListener():
     filePath = r'E:\\'
@@ -109,9 +113,6 @@ def InputListener():
         elif Command.startswith('read '):
             filename = Command.removeprefix('read ')
             print(filestorage[filename])
-        elif Command == 'close':
-            print('Server Shutdown')
-            serverSocket.close()
      
 
 
