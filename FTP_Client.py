@@ -93,11 +93,26 @@ IPAddr = gethostbyname(hostname)
 Server = '10.200.4.67'
 Port = 12345
 
+
+
+
 #Create socket
 clientSocket = socket(AF_INET, SOCK_STREAM)
 
 #Connect client to server
 clientSocket.connect((Server, Port))
+while True:
+    name = input("Enter your Username:").strip()
+    if name:
+        clientSocket.send(name.encode())
+        checkname = clientSocket.recv(1024).decode()
+        if checkname == 'Accept':
+            break
+        else:
+            print('Username is already taken. Please Try Again.')
+    else:
+        print("Username cannot be empty. Please Try Again.")
+    
 
 #Receive and print initial information
 print(clientSocket.recv(1024).decode())

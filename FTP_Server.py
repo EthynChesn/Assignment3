@@ -12,21 +12,20 @@ def WaitNext(clientSocket):
     if clientSocket.recv(1024).decode() == 'True':
         return
 
-def NewClient(clientSocket, addr):
+def NewClient(clientSocket, addr, username):
     global clients
-    clients += [addr[0]]
     while True:
         IncomingCommand = clientSocket.recv(1024).decode()
         if IncomingCommand == 'put':
             filename = clientSocket.recv(1024).decode()
             filecontent = clientSocket.recv(1024).decode()
             filestorage[filename] = filecontent
-            print(addr[0] + " Uploaded " + filename)
+            print(username + " Uploaded " + filename)
         if IncomingCommand == 'get':
             filename = clientSocket.recv(1024).decode()
-            print(addr[0] + ' requested ' + filename)
+            print(username + ' requested ' + filename)
             if not filename in filestorage:
-                print(addr[0] + ' Problem: ' + filename + " Not Found" )
+                print(username + ' Problem: ' + filename + " Not Found" )
                 clientSocket.send('error'.encode())
             else:
                 file = filestorage[filename]
@@ -44,18 +43,19 @@ def NewClient(clientSocket, addr):
         if IncomingCommand == 'delete':
             clientSocket.send('True'.encode())
             filename = clientSocket.recv(1024).decode()
-            print(addr[0] + ' is attempting to delete ' + filename)
+            print(username + ' is attempting to delete ' + filename)
             if filename in filestorage:
                 del filestorage[filename]
                 clientSocket.send('deleted'.encode())
-                print(filename + ' deleted by ' + addr[0])
+                print(filename + ' deleted by ' + username)
             else:
                 clientSocket.send('error'.encode())
-                print(addr[0] + ' Problem: ' + filename + ' Not Found')
+                print(username + ' Problem: ' + filename + ' Not Found')
         if IncomingCommand == 'close':
             clientSocket.send('True'.encode())
             clientSocket.close()
-            print(addr[0] + ' has disconnected')
+            print(username + ' has disconnected')
+            clients.remove(username)
             break
 
 def InputListener():
@@ -121,6 +121,7 @@ def InputListener():
 
 
 def main():
+    global clients
     Host = '0.0.0.0'
     Port = 12345
 
@@ -135,9 +136,15 @@ def main():
   
     while True:
         Connection, addr = serverSocket.accept()
-        print('Got connection: ' + str(addr))
+        clientname = Connection.recv(1024).decode()
+        if not clientname in clients:
+            clients += [clientname]
+            Connection.send('Accept'.encode())
+        else:
+            Connection.send('Reject'.encode())
+        print('Got connection: ' + clientname + ' (' + addr[0] + ')')
         print('Listening for clients to connect...')
-        ClientThread = Thread(target=NewClient, args=(Connection,addr))
+        ClientThread = Thread(target=NewClient, args=(Connection,addr,clientname))
         ClientThread.start()
         Connection.send(serverMessage.encode())
 
