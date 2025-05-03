@@ -5,150 +5,151 @@ import sys
 
 #Storage
 clients = []
-filestorage = {}
+fileStorage = {}
 connections = []
 
 
-#Wait to Send Next File Name to Client (List Command)
+#Wait to Send Next File Name to Client (List command)
 def WaitNext(clientSocket):
     if clientSocket.recv(1024).decode() == 'True':
         return
 
 #Main Client Thread
-def NewClient(clientSocket, addr):
+def NewClient(clientSocket, address):
     global clients
     global connections
-    clients += [addr[0]]
     connections += [clientSocket]
+    clientName = clientSocket.recv(1024).decode()
+    clients += [(clientName,address[0])]
 
     while True:
-        IncomingCommand = clientSocket.recv(1024).decode()
-        #Put Command
-        if IncomingCommand == 'put':
-            filename = clientSocket.recv(1024).decode()
-            filecontent = clientSocket.recv(1024).decode()
-            filestorage[filename] = filecontent
-            print(addr[0] + " Uploaded " + filename)
-        #Get Command
-        if IncomingCommand == 'get':
-            filename = clientSocket.recv(1024).decode()
-            print(addr[0] + ' requested ' + filename)
-            if not filename in filestorage:
-                print(addr[0] + ' Problem: ' + filename + " Not Found" )
+        incomingCommand = clientSocket.recv(1024).decode()
+        #Put command
+        if incomingCommand == 'put':
+            fileName = clientSocket.recv(1024).decode()
+            fileContent = clientSocket.recv(1024).decode()
+            fileStorage[fileName] = fileContent
+            print(clientName[0] + ' (' + clientName[1] + ')' + " Uploaded " + fileName)
+        #Get command
+        if incomingCommand == 'get':
+            fileName = clientSocket.recv(1024).decode()
+            print(address[0] + ' requested ' + fileName)
+            if not fileName in fileStorage:
+                print(clientName[0] + ' (' + clientName[1] + ')' + ' Problem: ' + fileName + " Not Found" )
                 clientSocket.send('error'.encode())
             else:
-                file = filestorage[filename]
+                file = fileStorage[fileName]
                 clientSocket.send(file.encode())
-        #List Command
-        if IncomingCommand == 'list':
-            storagelength = str(len(filestorage))  
-            clientSocket.send(storagelength.encode())
-            if len(filestorage) > 0:
+        #List command
+        if incomingCommand == 'list':
+            storageLength = str(len(fileStorage))  
+            clientSocket.send(storageLength.encode())
+            if len(fileStorage) > 0:
                 Acknowledge = clientSocket.recv(1024).decode()
                 if Acknowledge == 'True':
-                    for file in filestorage:
+                    for file in fileStorage:
                         clientSocket.send(file.encode())
                         WaitNext(clientSocket)
                 Acknowledge = False
-        #Delete Command
-        if IncomingCommand == 'delete':
+        #Delete command
+        if incomingCommand == 'delete':
             clientSocket.send('True'.encode())
-            filename = clientSocket.recv(1024).decode()
-            print(addr[0] + ' is attempting to delete ' + filename)
-            if filename in filestorage:
-                del filestorage[filename]
+            fileName = clientSocket.recv(1024).decode()
+            print(clientName[0] + ' (' + clientName[1] + ')' + ' is attempting to delete ' + fileName)
+            if fileName in fileStorage:
+                del fileStorage[fileName]
                 clientSocket.send('deleted'.encode())
-                print(filename + ' deleted by ' + addr[0])
+                print(fileName + ' deleted by ' + clientName[0] + ' (' + clientName[1] + ')')
             else:
                 clientSocket.send('error'.encode())
-                print(addr[0] + ' Problem: ' + filename + ' Not Found')
-        #Close Command
-        if IncomingCommand == 'close':
+                print(clientName[0] + ' (' + clientName[1] + ')' + ' Problem: ' + fileName + ' Not Found')
+        #Close command
+        if incomingCommand == 'close':
             clientSocket.send('True'.encode())
             clientSocket.close()
-            print(addr[0] + ' has disconnected')
+            print(clientName[0] + ' (' + clientName[1] + ')' + ' has disconnected')
             break
-        #Rename Command
-        if IncomingCommand == 'rename':
+        #Rename command
+        if incomingCommand == 'rename':
             clientSocket.send('True'.encode())
             oldName = clientSocket.recv(1024).decode()
             newName = clientSocket.recv(1024).decode()
-            if oldName in filestorage:
-                filestorage[newName] = filestorage.pop(oldName)
+            if oldName in fileStorage:
+                fileStorage[newName] = fileStorage.pop(oldName)
                 clientSocket.send('renamed'.encode())
-                print(f"{addr[0]} renamed {oldName} to {newName}")
+                print(f"{clientName[0] + ' (' + clientName[1] + ')'} renamed {oldName} to {newName}")
             else:
                 clientSocket.send('error'.encode())
-                print(addr[0] + ' Problem: ' + filename + ' Not Found')
+                print(clientName[0] + ' (' + clientName[1] + ')' + ' Problem: ' + fileName + ' Not Found')
 
 #Listen for Server Input, listen for certain commands.
 def InputListener():
     global connections
     filePath = r'' #Replace with Server File Path (Root of Drive Recommended)
     while True:
-        Command = input()
-        #List Files Command
-        if Command == "listfiles":
-            if len(filestorage) > 0:
+        command = input()
+        #List Files command
+        if command == "listfiles":
+            if len(fileStorage) > 0:
                 print('List of Files on Server:')
-                for file in filestorage:
+                for file in fileStorage:
                     print(file)
             else:
                 print('Problem: List of Files is Empty')
-        #List Users Command
-        elif Command == "listusers":
+        #List Users command
+        elif command == "listusers":
             if len(clients) > 0:
                 print('List of Users Connected to Server:')
                 for client in clients:
-                    print(client)
+                    print(client[0] + ' (' + client[1] + ')')
             else:
                 print('Problem: No Users are Currently Connected')
-        #Delete Command
-        elif Command.startswith('delete '):
-            filename = Command.removeprefix('delete ')
-            if filename in filestorage:
-                del filestorage[filename]
-                print('deleted ' + filename)
+        #Delete command
+        elif command.startswith('delete '):
+            fileName = command.removeprefix('delete ')
+            if fileName in fileStorage:
+                del fileStorage[fileName]
+                print('deleted ' + fileName)
             else:
                 print('Problem: File Not Found')
-        #Backup Command
-        elif Command == 'backup':
-            if len(filestorage) > 0:
-                filenames = ''
-                for file in filestorage:
-                    filenames += file + '\n'
-                    filecontent = filestorage[file]
-                    with open(filePath + file, 'w') as Writefile:
-                        Writefile.write(filecontent)
-                        Writefile.close()
-                with open(filePath + 'backup' + datetime.now().strftime('%Y-%m-%d-%H%M%S') +'.txt', 'w') as Backupfile:
-                    Backupfile.write(filenames)
-                    Backupfile.close()
+        #Backup command
+        elif command == 'backup':
+            if len(fileStorage) > 0:
+                fileNames = ''
+                for file in fileStorage:
+                    fileNames += file + '\n'
+                    fileContent = fileStorage[file]
+                    with open(filePath + file, 'w') as writeFile:
+                        writeFile.write(fileContent)
+                        writeFile.close()
+                with open(filePath + 'backup' + datetime.now().strftime('%Y-%m-%d-%H%M%S') +'.txt', 'w') as backupFile:
+                    backupFile.write(fileNames)
+                    backupFile.close()
                 print('All Files Backed Up')
             else:
                 print('Problem: No Files to Back Up')
-        #Load Command
-        elif Command.startswith('load '):
-            backfile = Command.removeprefix('load ')
-            with open(filePath + backfile, 'r') as Loadfile:
-                filenames = []
-                for line in Loadfile:
-                    filenames += ["{}".format(line.strip())]
-                Loadfile.close()
-            for file in filenames:
+        #Load command
+        elif command.startswith('load '):
+            backfile = command.removeprefix('load ')
+            with open(filePath + backfile, 'r') as loadFile:
+                fileNames = []
+                for line in loadFile:
+                    fileNames += ["{}".format(line.strip())]
+                loadFile.close()
+            for file in fileNames:
                 try:
-                    with open(filePath + file) as Loadfile:
-                        filestorage[file] = Loadfile.read()
-                    Loadfile.close()
+                    with open(filePath + file) as loadFile:
+                        fileStorage[file] = loadFile.read()
+                    loadFile.close()
                 except:
                     print('Problem: ' + file + ' Was Skipped Because it Could Not be Found')
             print('Files Loaded Sucessfully')
-        #Read Command
-        elif Command.startswith('read '):
-            filename = Command.removeprefix('read ')
-            print(filestorage[filename])
-        #Close Command
-        elif Command == 'close':
+        #Read command
+        elif command.startswith('read '):
+            fileName = command.removeprefix('read ')
+            print(fileStorage[fileName])
+        #Close command
+        elif command == 'close':
             print('Server Shutting Down')
             for connection in connections:
                 connection.close()
@@ -167,17 +168,17 @@ def main():
     print('Listening for clients to connect...')
     serverMessage = 'Welcome! Type "help" to see a list of commands.'
 
-    InputThread = Thread(target=InputListener)
-    InputThread.start()
+    inputThread = Thread(target=InputListener)
+    inputThread.start()
 
     #Main Loop
     while True:
-        Connection, addr = serverSocket.accept()
-        print('Got connection: ' + str(addr))
+        connection, address = serverSocket.accept()
+        print('Got connection: ' + str(address))
         print('Listening for clients to connect...')
-        ClientThread = Thread(target=NewClient, args=(Connection,addr))
-        ClientThread.start()
-        Connection.send(serverMessage.encode())
+        clientThread = Thread(target=NewClient, args=(connection,address))
+        clientThread.start()
+        connection.send(serverMessage.encode())
 
 #Start
 
