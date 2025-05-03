@@ -48,13 +48,16 @@ def get(getfilename):
         print(getfilename + " Downloaded succesfully")
         Writefile.close()
 
+
 def InputListener():
     global Close
     Message = input()
     if Message.startswith('put '):
         put(Message.removeprefix('put '))
+
     elif Message.startswith('get '):
         get(Message.removeprefix('get '))
+
     elif Message == 'list':
         clientSocket.send('list'.encode())
         listlength = clientSocket.recv(1024).decode()
@@ -68,6 +71,7 @@ def InputListener():
                 file = clientSocket.recv(1024).decode()
                 print(file)
                 clientSocket.send('True'.encode())
+
     elif Message.startswith('delete '):
         clientSocket.send('delete'.encode())
         Acknowledge = clientSocket.recv(1024).decode()
@@ -78,16 +82,35 @@ def InputListener():
             print(Message.removeprefix('delete ') + ' succesfully deleted from Server')
         else:
             print('Error: File Not Found on Server')
+
     elif Message == 'close':
         clientSocket.send('close'.encode())
         Acknowledge = clientSocket.recv(1024).decode()
         if Acknowledge == 'True':
             clientSocket.close()
             Close = True
+    
+    elif Message.startswith('rename '):
+        clientSocket.send('rename'.encode())
+        Acknowledge = clientSocket.recv(1024).decode()
+        if Acknowledge == 'True':
+            try:
+                oldName, newName = Message.removeprefix('rename ').split()
+                clientSocket.send(oldName.encode())
+                clientSocket.send(newName.encode())
+                outcome = clientSocket.recv(1024).decode()
+                if outcome == 'renamed':
+                    print('File has been successfully renamed')
+                else:
+                    print('Error: File Not Found on Server')
+            except ValueError:
+                print("Error: Please try again, format as 'rename (old file name) (new file name)")
+
+    elif Message == 'help':
+        print('Commands:\nput <DriveName:\\filepath\\filename>\nget <filename>\ndelete <filename>\nrename <old filename> <new filename>\nlist\nclose')
 
 
-
-filePath = r"E:\\"
+filePath = r'E:\\'
 hostname = gethostname()
 IPAddr = gethostbyname(hostname)
 Server = '10.200.4.67'

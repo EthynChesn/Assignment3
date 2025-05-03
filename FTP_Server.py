@@ -13,6 +13,7 @@ def WaitNext(clientSocket):
     if clientSocket.recv(1024).decode() == 'True':
         return
 
+
 def NewClient(clientSocket, addr):
     global clients
     global connections
@@ -26,6 +27,7 @@ def NewClient(clientSocket, addr):
             filecontent = clientSocket.recv(1024).decode()
             filestorage[filename] = filecontent
             print(addr[0] + " Uploaded " + filename)
+
         if IncomingCommand == 'get':
             filename = clientSocket.recv(1024).decode()
             print(addr[0] + ' requested ' + filename)
@@ -35,6 +37,7 @@ def NewClient(clientSocket, addr):
             else:
                 file = filestorage[filename]
                 clientSocket.send(file.encode())
+
         if IncomingCommand == 'list':
             storagelength = str(len(filestorage))  
             clientSocket.send(storagelength.encode())
@@ -45,6 +48,7 @@ def NewClient(clientSocket, addr):
                         clientSocket.send(file.encode())
                         WaitNext(clientSocket)
                 Acknowledge = False
+
         if IncomingCommand == 'delete':
             clientSocket.send('True'.encode())
             filename = clientSocket.recv(1024).decode()
@@ -56,11 +60,25 @@ def NewClient(clientSocket, addr):
             else:
                 clientSocket.send('error'.encode())
                 print(addr[0] + ' Problem: ' + filename + ' Not Found')
+
         if IncomingCommand == 'close':
             clientSocket.send('True'.encode())
             clientSocket.close()
             print(addr[0] + ' has disconnected')
             break
+
+        if IncomingCommand == 'rename':
+            clientSocket.send('True'.encode())
+            oldName = clientSocket.recv(1024).decode()
+            newName = clientSocket.recv(1024).decode()
+            if oldName in filestorage:
+                filestorage[newName] = filestorage.pop(oldName)
+                clientSocket.send('renamed'.encode())
+                print(f"{addr[0]} renamed {oldName} to {newName}")
+            else:
+                clientSocket.send('error'.encode())
+                print(addr[0] + ' Problem: ' + filename + ' Not Found')
+
 
 def InputListener():
     global connections
@@ -127,8 +145,6 @@ def InputListener():
                 connection.close()
             serverSocket.close()
             sys.exit()
-     
-
 
 
 def main():
@@ -138,7 +154,7 @@ def main():
     serverSocket.bind((Host, Port))
     serverSocket.listen(5)
     print('Listening for clients to connect...')
-    serverMessage = 'Welcome!'
+    serverMessage = 'Welcome! Type "help" to see a list of commands.'
 
     InputThread = Thread(target=InputListener)
     InputThread.start()
