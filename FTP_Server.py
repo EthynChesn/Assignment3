@@ -3,17 +3,18 @@ from threading import *
 from datetime import datetime
 import sys
 
-serverSocket = socket(AF_INET, SOCK_STREAM)
-
+#Storage
 clients = []
 filestorage = {}
 connections = []
 
+
+#Wait to Send Next File Name to Client (List Command)
 def WaitNext(clientSocket):
     if clientSocket.recv(1024).decode() == 'True':
         return
 
-
+#Main Client Thread
 def NewClient(clientSocket, addr):
     global clients
     global connections
@@ -22,12 +23,13 @@ def NewClient(clientSocket, addr):
 
     while True:
         IncomingCommand = clientSocket.recv(1024).decode()
+        #Put Command
         if IncomingCommand == 'put':
             filename = clientSocket.recv(1024).decode()
             filecontent = clientSocket.recv(1024).decode()
             filestorage[filename] = filecontent
             print(addr[0] + " Uploaded " + filename)
-
+        #Get Command
         if IncomingCommand == 'get':
             filename = clientSocket.recv(1024).decode()
             print(addr[0] + ' requested ' + filename)
@@ -37,7 +39,7 @@ def NewClient(clientSocket, addr):
             else:
                 file = filestorage[filename]
                 clientSocket.send(file.encode())
-
+        #List Command
         if IncomingCommand == 'list':
             storagelength = str(len(filestorage))  
             clientSocket.send(storagelength.encode())
@@ -48,7 +50,7 @@ def NewClient(clientSocket, addr):
                         clientSocket.send(file.encode())
                         WaitNext(clientSocket)
                 Acknowledge = False
-
+        #Delete Command
         if IncomingCommand == 'delete':
             clientSocket.send('True'.encode())
             filename = clientSocket.recv(1024).decode()
@@ -60,13 +62,13 @@ def NewClient(clientSocket, addr):
             else:
                 clientSocket.send('error'.encode())
                 print(addr[0] + ' Problem: ' + filename + ' Not Found')
-
+        #Close Command
         if IncomingCommand == 'close':
             clientSocket.send('True'.encode())
             clientSocket.close()
             print(addr[0] + ' has disconnected')
             break
-
+        #Rename Command
         if IncomingCommand == 'rename':
             clientSocket.send('True'.encode())
             oldName = clientSocket.recv(1024).decode()
@@ -79,12 +81,13 @@ def NewClient(clientSocket, addr):
                 clientSocket.send('error'.encode())
                 print(addr[0] + ' Problem: ' + filename + ' Not Found')
 
-
+#Listen for Server Input, listen for certain commands.
 def InputListener():
     global connections
-    filePath = r'E:\\'
+    filePath = r'' #Replace with Server File Path (Root of Drive Recommended)
     while True:
         Command = input()
+        #List Files Command
         if Command == "listfiles":
             if len(filestorage) > 0:
                 print('List of Files on Server:')
@@ -92,6 +95,7 @@ def InputListener():
                     print(file)
             else:
                 print('Problem: List of Files is Empty')
+        #List Users Command
         elif Command == "listusers":
             if len(clients) > 0:
                 print('List of Users Connected to Server:')
@@ -99,6 +103,7 @@ def InputListener():
                     print(client)
             else:
                 print('Problem: No Users are Currently Connected')
+        #Delete Command
         elif Command.startswith('delete '):
             filename = Command.removeprefix('delete ')
             if filename in filestorage:
@@ -106,6 +111,7 @@ def InputListener():
                 print('deleted ' + filename)
             else:
                 print('Problem: File Not Found')
+        #Backup Command
         elif Command == 'backup':
             if len(filestorage) > 0:
                 filenames = ''
@@ -121,6 +127,7 @@ def InputListener():
                 print('All Files Backed Up')
             else:
                 print('Problem: No Files to Back Up')
+        #Load Command
         elif Command.startswith('load '):
             backfile = Command.removeprefix('load ')
             with open(filePath + backfile, 'r') as Loadfile:
@@ -136,9 +143,11 @@ def InputListener():
                 except:
                     print('Problem: ' + file + ' Was Skipped Because it Could Not be Found')
             print('Files Loaded Sucessfully')
+        #Read Command
         elif Command.startswith('read '):
             filename = Command.removeprefix('read ')
             print(filestorage[filename])
+        #Close Command
         elif Command == 'close':
             print('Server Shutting Down')
             for connection in connections:
@@ -146,20 +155,22 @@ def InputListener():
             serverSocket.close()
             sys.exit()
 
-
+#Main Function
 def main():
+    #Initiliazation
     Host = '0.0.0.0'
     Port = 12345
-
+    
     serverSocket.bind((Host, Port))
     serverSocket.listen(5)
+
     print('Listening for clients to connect...')
     serverMessage = 'Welcome! Type "help" to see a list of commands.'
 
     InputThread = Thread(target=InputListener)
     InputThread.start()
 
-  
+    #Main Loop
     while True:
         Connection, addr = serverSocket.accept()
         print('Got connection: ' + str(addr))
@@ -167,6 +178,11 @@ def main():
         ClientThread = Thread(target=NewClient, args=(Connection,addr))
         ClientThread.start()
         Connection.send(serverMessage.encode())
+
+#Start
+
+    #Create Socket
+serverSocket = socket(AF_INET, SOCK_STREAM)
 
 if __name__ == '__main__':
     main()

@@ -2,6 +2,7 @@ from socket import *
 from threading import *
 import sys
 
+#Put Function. Open file, seperate file name from path, send filename and contents of file to Server. 
 def put(filename):
     try:
         file = open(filename,'r')
@@ -33,7 +34,7 @@ def put(filename):
             print('Succesfully Uploaded ' + filename)
             file.close()
     
-
+#Get Function. Get file from server, write to Client computer.
 def get(getfilename):
     global filePath
     Request = getfilename
@@ -48,16 +49,17 @@ def get(getfilename):
         print(getfilename + " Downloaded succesfully")
         Writefile.close()
 
-
+#Listen for User input, listen for certain commands.
 def InputListener():
     global Close
     Message = input()
+    #Put Command
     if Message.startswith('put '):
         put(Message.removeprefix('put '))
-
+    #Get Command
     elif Message.startswith('get '):
         get(Message.removeprefix('get '))
-
+    #List Command
     elif Message == 'list':
         clientSocket.send('list'.encode())
         listlength = clientSocket.recv(1024).decode()
@@ -71,7 +73,7 @@ def InputListener():
                 file = clientSocket.recv(1024).decode()
                 print(file)
                 clientSocket.send('True'.encode())
-
+    #Delete Command
     elif Message.startswith('delete '):
         clientSocket.send('delete'.encode())
         Acknowledge = clientSocket.recv(1024).decode()
@@ -82,14 +84,14 @@ def InputListener():
             print(Message.removeprefix('delete ') + ' succesfully deleted from Server')
         else:
             print('Error: File Not Found on Server')
-
+    #Close Command
     elif Message == 'close':
         clientSocket.send('close'.encode())
         Acknowledge = clientSocket.recv(1024).decode()
         if Acknowledge == 'True':
             clientSocket.close()
             Close = True
-    
+    #Rename Command
     elif Message.startswith('rename '):
         clientSocket.send('rename'.encode())
         Acknowledge = clientSocket.recv(1024).decode()
@@ -105,16 +107,14 @@ def InputListener():
                     print('Error: File Not Found on Server')
             except ValueError:
                 print("Error: Please try again, format as 'rename (old file name) (new file name)")
-
+    #Help Command
     elif Message == 'help':
         print('Commands:\nput <DriveName:\\filepath\\filename>\nget <filename>\ndelete <filename>\nrename <old filename> <new filename>\nlist\nclose')
 
-
-filePath = r'E:\\'
-hostname = gethostname()
-IPAddr = gethostbyname(hostname)
-Server = '10.200.4.67'
-Port = 12345
+#Client Information
+filePath = r'' #Replace with Client File Path (Root of Drive Recommended)
+Server = '10.200.4.67' #Replace with Server IP
+Port = 12345 
 
 #Create socket
 clientSocket = socket(AF_INET, SOCK_STREAM)
@@ -125,6 +125,7 @@ clientSocket.connect((Server, Port))
 #Receive and print initial information
 print(clientSocket.recv(1024).decode())
 
+#Main Loop
 Close = False
 while True:
     InputThread = Thread(target=InputListener)
